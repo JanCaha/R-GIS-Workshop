@@ -1,0 +1,38 @@
+.highlight{
+  color: #ef0000;
+  font-weight: bold;
+}
+
+.hl{
+  color: #ef0000;
+  font-weight: bold;
+}
+
+.hl_kw{
+  color: #09A820;
+  font-weight: bold;
+}
+
+.remark-inline-code{
+  color: #003fef;
+  font-weight: bold;
+}
+
+.left-code {
+  color: #777;
+  width: 38%;
+  height: 92%;
+  float: left;
+}
+
+.right-plot {
+  width: 60%;
+  float: right;
+  padding-left: 1%;
+}
+
+.remark-code{
+  font-size: 1em;
+  color: #003fef;
+  font-weight: bold;
+}

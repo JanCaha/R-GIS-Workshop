@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Možnosti využití jazyka R jako skriptovacího nástroje pro GIS  na příkladech QGIS a ArcGIS</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Jan Caha (jan.caha@mendelu.cz)" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="additions.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Možnosti využití jazyka R<br/>jako skriptovacího nástroje pro GIS<br/> na příkladech QGIS a ArcGIS
+## Workshop GIS Ostrava 2020
+### Jan Caha<br/>(jan.caha@mendelu.cz)
+### 18. 3. 2020
+
+---
+
+
+
+
+
+
+class: inverse, center, middle
+
+# Obsah
+
+---
+
+# Obsah
+
+- Interakce různých nástrojů
+- QGIS
+  - Instalace
+  - **Processing R Provider** Plugin - [odkaz na web](https://north-road.github.io/qgis-processing-r/)
+  - Nastavení 
+  - Struktura skriptu
+  - Ukázkové skripty
+- ArcGIS
+  - Instalace
+  - **R Bridge** - [odkaz na web](https://r-arcgis.github.io/)
+  - Struktura skriptu
+  - Ukázky
+- Srovnání
+
+---
+
+# Interakce různých nástrojů
+
+- obecná snaha vyhnout se přenášení dat (obecně práce) mezi různými nástroji a prostředími
+
+- snaha maximálně využít a zkombinovat dostupná řešení a nástroje (zabránění duplikace práce) 
+  - typický příklad: implementace jedné knihovny v několika jazycích
+  
+- rozdíl v přístupu mezi __open source__ a __placeným softwarem__
+
+- ideálně vytvoření bezešvého prostředí:
+  - uživatel neřeší, kde a čím jsou data zpracovávána
+  - tvůrce (programátor), má co nejvolnější ruku pro práci, aniž by musel řešit podružné drobnosti 
+
+---
+
+# **R** &amp; **GIS**
+
+- silné stránky
+  - **GIS** - prostorová data, zpracování a vizualizace prostorových dat, uživatelská přístupnost
+  - **R** - zpracování dat, statistika, modelování, vizualizace dat (grafy)
+  
+- slabé stránky
+  - **GIS** - statistické nástroje, zpracování dat, vizualizace dat (grafy)   
+  - **R** - vizualizace prostorových dat (?), uživatelská přístupnost(?)
+  
+- zpracování prostorových dat v **R** má téměř 20 letou historii, z toho 15 let existují specializované balíky na prostorová data, poslední 3 roky výrazná modernizace (balíky __sf__, __stars__ etc.)
+
+---
+class: inverse, center, middle
+
+# QGIS
+
+---
+
+# Instalace
+
+- [QGIS](https://qgis.org/en/site/forusers/download.html) minimálně verzi 3.10 (LTR), ale lépe aktuální 3.12
+  - na Windows doporučuji instalaci [OSGeo4W](https://trac.osgeo.org/osgeo4w/), možnost používat i vývojovou verzi QGIS
+  
+- [R](https://cran.r-project.org/) aktuální verzi
+
+- doporučené [RStudio](https://rstudio.com/products/rstudio/download/#download) pro psaní komplexnější R skriptů
+
+- **Processing R Provider** Plugin
+  - instalace z QGIS - menu **Plugins** -&gt; **Manage and install Plugins...** -&gt; **All** -&gt; **Processing R Provider** -&gt; **Install Plugin**
+  
+---
+# Nastavení
+
+- QGIS Menu -&gt; **Settings** -&gt; **Options** -&gt; **Processing** -&gt; **Providers** -&gt; **R**
+
+- je třeba nastavit či zkontrolovat proměnné
+  - **R folder** - odkaz do složky se spustitelným souborem **R**
+  - **R scripts folder** - odkaz na složky, kde se hledají **R skripty** pro spuštění, lze jich mít více, oddělují se `;`
+  - může být problém se zapisováním knihoven, pak je nutné změnit nastavení **Use user R library...**, nebo spouštět **QGIS** s admin právy
+
+- .highlight[pozor na updaty R, mohou způsobit, že nastavení nebudou platná]
+  
+---
+
+![:scale 90%](images/settings.jpg)
+
+---
+# Struktura skriptu
+
+- skripty jsou textové soubory s příponou **.rsx**
+
+- začátek skriptu je několik řádek uvozených `##`, tzv. hlavička skriptu, která určuje, jak bude QGIS **R skript** načítat a pracovat s ním
+
+- zbytek skriptu je běžný **R kód** pro zpracování dat
+
+- pokud chceme ze skriptu tisknout nějaké výstupy do logu nástroje v QGIS, je třeba uvodit řádek znakem `&gt;`
+
+---
+
+# Hlavička skriptu - Metadata skriptu
+
+- `##jmeno skriptu=name` - název skriptu v toolboxu
+
+- `##jmeno kategorie=group` - kategorizace skriptů do skupin
+
+- .highlight[oba údaje je vhodné vyplňovat, pro lepší orientaci ve skriptech]
+
+---
+
+# Hlavička skriptu - Chování skriptu
+
+- `##output_plots_to_html`
+
+- `##load_raster_using_rgdal` (starší verze `##dontuserasterpackage`), načíst raster pomocí balíků **rgdal** a **sp**, alternativa je balík **raster**
+
+- `##load_vector_using_rgdal` načte vektor pomocí balíků **rgdal** a **sp**, jinak se použije balík **sf**
+
+- `##pass_filenames` nepředává data přímo do skriptu, pouze názvy a cesty k souborům, další zpracování je nutné v rámci skriptu
+
+---
+
+# Hlavička skriptu - Vstupní proměnné
+
+- `##variable_name=variable_type [default_value/from_variable]`
+
+- typy proměnných - .hl_kw[vector, raster, table, number, string, boolean, Field]
+
+- pro proměnné typu .hl_kw[number, string] a .hl_kw[boolean] lze nastavit výchozí hodnotu
+
+- pro .hl_kw[Field] lze nastavit hlavní proměnnou, ze které se pole přebere (určí se názvem proměnné)
+
+- takto definované proměnné budou dostupné pro zbytek **R skriptu**
+
+```
+##Layer=vector
+
+##Size=number 10
+
+##X=Field Layer
+```
+---
+
+# Hlavička - Výstupní proměnné
+
+- `##variable_name=output output_type`
+
+- typy proměnných - .hl_kw[layer, raster, folder, HTML, number, string, table]
+
+- určují, které proměnné ze skriptu se budou předávat zpět do prostředí QGIS
+
+```
+##New_layer=output vector
+
+##New_raster=output raster
+```
+---
+
+# Chování skriptu
+
+- na základě hlavičky skritpu se vytvoří GUI nástroje
+
+- podle chování skriptu se automaticky načtou nezbytné balíky buď **rgdal** a **sp** nebo **sf** či **raster**
+
+- pokud skript specifikuje načtení knihovny např. `library(dplyr)`, automaticky se kontroluje dostupnost knihovny a případně je nainstalována 
+
+- .highlight[je potřeba dávat pozor na skripty, používající knihovny instalovaná z neoficiálních zdrojů (např. GitHub atd.), mohou způsobit problém, pokud knihovna není nainstalována (nelze ji automaticky jednoduše nainstalovat)]
+  - jedna z ukázek
+
+---
+class: inverse, center, middle
+
+# Ukázky
+
+---
+
+# Ukázka 1
+
+- pro danou vrstvu a atribut vytvoříme histogram s definovaným počtem intervalů
+
+---
+
+# Ukázka 2
+
+- stažení vektorové vrstvy a její zobrazení v QGIS
+
+---
+
+# Ukázka 3
+
+- stažení dat a přidání do QGIS v podobě tabulky
+
+- před samotným spuštěním skriptu je třeba nainstalovat knihovny, které nejsou z centrálního repozitáře
+
+- buď v **RStudiu** nebo **RGui** spustit následující příkazy
+
+
+```r
+install.packages("remotes")
+remotes::install_github("JanCaha/CzechData")
+```
+
+---
+
+# Ukázka 4
+
+- vytvoření jednoduchého regresního modelu na prostorových datech
+
+---
+
+# Ukázka 5
+
+- vyhlazování pomocí Kernel Density Estimation (KDE) na vektorovém podkladě
+
+- je potřeba instalace knihovny z GitHubu jako v případě Ukázky 3
+
+---
+
+# Ukázka 6
+
+- fokální vyhlazení rastru s možností nastavení velikosti okna (číslo musí být liché!)
+
+---
+
+# Ukázky na webu pluginu
+
+- [https://north-road.github.io/qgis-processing-r/](https://north-road.github.io/qgis-processing-r/)
+
+---
+class: inverse, center, middle
+
+# ArcGIS
+
+---
+
+# Instalace
+
+- **ArcGIS** nebo **ArcGIS Pro**
+  
+- [R](https://cran.r-project.org/) aktuální verzi
+
+- doporučené [RStudio](https://rstudio.com/products/rstudio/download/#download) pro psaní komplexnější R skriptů
+
+- **R Bridge** - [odkaz na web](https://r-arcgis.github.io/)
+  - instalace detailně popsána na [GitHubu](https://github.com/R-ArcGIS/r-bridge-install)
+  
+- [ukázkový toolbox](https://github.com/R-ArcGIS/r-sample-tools)
+
+---
+
+# Nastavení
+
+- provádí se skrze toolbox **R Bridge**
+
+- GUI rozhraní toolboxu i samotných nástrojů se musí vytvořit přes **ArcCatalog**, stejně jako pro skripty v **Pythonu**
+
+- přístup k nástrojům je shodný jako v případě **Pythonu** 
+
+---
+
+# Struktura skriptu
+
+- nutnostní je existence funkce, skrze kterou se skript spouští
+
+
+```r
+tool_exec &lt;- function(in_params, out_params)
+{}
+```
+
+- v rámci této funkce musí uživatel obstarat 
+  - načtení a případně instalaci knihoven
+  - načtení dat
+  
+- pomocné funkce `arc.*`
+  - skrze některé možnost interakce s prostředím ArcGISu
+  - čtení a zápis dat 
+  - atd.
+
+---
+
+# Ukázky z R sample tools
+
+- [link](https://github.com/R-ArcGIS/r-sample-tools)
+
+- řešení knihoven
+
+- načítání dat a kompletace dat
+
+---
+class: inverse, center, middle
+
+# Zhodnocení
+
+---
+
+# Srovnání
+
+- možnost používat **R** jak z **QGIS** tak i z **ArcGIS**
+
+- možnost relativně plynule využívat spojení GIS a jazyka zaměřeného na zpracování a statistickou analýzu dat
+
+- dva odlišné přístupy, z čehož jeden je výrazně jednodušší a přístupnější
+
+- plugin pro **QGIS** je stále relativně ve vývoji aktuálně s několika návrhy na vylepšení či změny  
+
+---
+class: inverse, center, middle
+
+# Děkuji za pozornost!
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="libs/remark-latest.min.js"></script>
+<script src="macros.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  /* Replace <script> tags in slides area to make them executable
+   *
+   * Runs after post-processing of markdown source into slides and replaces only
+   * <script>s on the last slide of continued slides using the .has-continuation
+   * class added by xaringan. Finally, any <script>s in the slides area that
+   * aren't executed are commented out.
+   */
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container:not(.has-continuation) script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+  var scriptsNotExecuted = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container.has-continuation script'
+  );
+  if (!scriptsNotExecuted.length) return;
+  for (var i = 0; i < scriptsNotExecuted.length; i++) {
+    var comment = document.createComment(scriptsNotExecuted[i].outerHTML)
+    scriptsNotExecuted[i].parentElement.replaceChild(comment, scriptsNotExecuted[i])
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
