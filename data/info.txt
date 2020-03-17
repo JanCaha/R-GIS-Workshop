@@ -1,0 +1,3 @@
+Zdrojem prostorových dat jsou datové sady RUIAN a Data200 ČÚZK (Mapový podklad – Data200, 2020 © Český úřad zeměměřický a katastrální, www.cuzk.cz.)
+
+Zdrojem údajů o obyvatelstvu je ČSÚ, konkrétně datová sada SLDB2011.
